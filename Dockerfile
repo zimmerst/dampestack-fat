@@ -13,10 +13,10 @@ RUN yum -y install mesa-libGLU-devel libXmu-devel && yum clean all
 ### HERE COMES DAMPE STACK
 ## gcc 4.9.3
 RUN mkdir -p /opt/exp_software/dampe/externals/gcc/4.9.3
-ADD https://ftp.gnu.org/gnu/gcc/gcc-4.9.3/gcc-4.9.3.tar.gz /tmp/
+ADD https://ftp.gnu.org/gnu/gcc/gcc-4.9.3/gcc-4.9.3.tar.gz /tmp/gcc-4.9.3
 RUN cd /tmp/gcc-4.9.3/ && ./contrib/download_prerequisites && cd .. &&\
-		mkdir -p objdir && cd objdir &&\
-		$PWD/../gcc-4.9.3/configure --prefix=/opt/exp_software/dampe/externals/gcc/4.9.3 --enable-languages=c,c++,fortran,go
+	mkdir -p objdir && cd objdir &&\
+	$PWD/../gcc-4.9.3/configure --prefix=/opt/exp_software/dampe/externals/gcc/4.9.3 --enable-languages=c,c++,fortran,go
 RUN make && make install
 ## cmake (from yum)
 RUN yum -y install cmake
@@ -24,20 +24,20 @@ RUN yum -y install cmake
 RUN mkdir -p /opt/exp_software/dampe/externals/xerces-c/3.1.1
 ADD http://mirror.switch.ch/mirror/apache/dist//xerces/c/3/sources/xerces-c-3.1.1.tar.gz /opt/exp_software/dampe/externals/xerces-c/3.1.1
 RUN cd /opt/exp_software/dampe/externals/xerces-c/3.1.1 && ./configure CFLAGS="-arch x86_64" CXXFLAGS="-arch x86_64" &&\
-		make && make install
+	make && make install
 ## python2.7
 RUN mkdir -p ${DAMPE_EXT}/python2.7/latest/build
 ADD https://www.python.org/ftp/python/2.7/Python-2.7.tgz ${DAMPE_EXT}/python2.7/latest/ && cd ${DAMPE_EXT}/python2.7/latest/ &&\
-		./configure --prefix=$(pwd)/build --enable-shared --with-ensurepip >> configure.log && make && make install
+	./configure --prefix=$(pwd)/build --enable-shared --with-ensurepip >> configure.log && make && make install
 RUN export pypath=${DAMPE_EXT}/python2.7/latest/build &&\
-		export LD_LIBRARY_PATH=${pypath}/lib:${LD_LIBRARY_PATH} &&\
-		export LIBRARY_PATH=${pypath}/lib:${LIBRARY_PATH} &&\
-		export PYTHONPATH=${pypath}/lib:${PYTHONPATH} &&\
-		export PATH=${pypath}/bin:${PATH}
+	export LD_LIBRARY_PATH=${pypath}/lib:${LD_LIBRARY_PATH} &&\
+	export LIBRARY_PATH=${pypath}/lib:${LIBRARY_PATH} &&\
+	export PYTHONPATH=${pypath}/lib:${PYTHONPATH} &&\
+	export PATH=${pypath}/bin:${PATH}
 ## boost
 ADD http://sourceforge.net/projects/boost/files/boost/1.55.0/boost_1_55_0.tar.gz/download /tmp/boost-1.55.0/
 RUN mkdir -p ${DAMPE_EXT}/boost/1.55.0/ && cd /tmp/boost-1.55.0/ && \
-		./b2 install -j8 --prefix=${DAMPE_EXT}/boost/1.55.0 --build-type=minimal variant=release --layout=tagged threading=multi --with-python --with-system --with-filesystem
+	./b2 install -j8 --prefix=${DAMPE_EXT}/boost/1.55.0 --build-type=minimal variant=release --layout=tagged threading=multi --with-python --with-system --with-filesystem
 
 
 ### add ROOT
