@@ -83,31 +83,27 @@ RUN git clone git://cmake.org/cmake.git CMake && \
 RUN echo '/usr/local/lib' >> /etc/ld.so.conf.d/usr-local.conf && \
     ldconfig
 
-# Build and install Python from source.
-RUN yum -y install python27
-RUN source /opt/rh/python27/enable && which python
-RUN source /opt/rh/python27/enable && easy_install scons==${SCONS_VERSION}
-
-
-## add scons
-#WORKDIR /usr/src
-#RUN wget https://cytranet.dl.sourceforge.net/project/scons/scons/${SCONS_VERSION}/scons-${SCONS_VERSION}.zip && \
-#    unzip scons-${SCONS_VERSION}.zip && \
-#    cd scons-${SCONS_VERSION} && \
-#    python setup.py install
+# build python from ANACONDA
+ARG PYTHON_VERSION=2.7
+ARG CONDA_DOWNLOAD=Miniconda-latest-Linux-x86_64.sh
+ARG CONDA_DEPS="jupyter ipython pandas"
+ENV PATH /opt/conda/bin:$PATH
+RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh && \
+    curl -o miniconda.sh -L http://repo.continuum.io/miniconda/$CONDA_DOWNLOAD && \
+    /bin/bash miniconda.sh -b -p /opt/conda && \
+    rm miniconda.sh && conda update -y conda && conda config --append channels conda-forge
+RUN conda install -y python=$PYTHON_VERSION pip numpy scons==${SCONS_VERSION}
 
 ## add latest XrootD-python bindings
 WORKDIR /usr/src
-RUN source /opt/rh/python27/enable && \
-    git clone git://github.com/xrootd/xrootd-python.git && cd xrootd-python && \
-    python setup.py install
+RUN git clone git://github.com/xrootd/xrootd-python.git && cd xrootd-python && \
+    /opt/conda/bin/python setup.py install
 #
 ## adding boost
 WORKDIR /usr/lib
 RUN wget https://dl.bintray.com/boostorg/release/${BOOST_VERSION}/source/boost_${BOOST_VERSION_STR}.tar.gz 2> /dev/null&&\
     source /opt/rh/devtoolset-4/enable && \
-    source /opt/rh/python27/enable && \
-    cd /usr/lib && ls -la &&\
+    cd /usr/lib && \
     tar xzf boost_${BOOST_VERSION_STR}.tar.gz &&\
     cd boost_${BOOST_VERSION_STR} &&\
     ./bootstrap.sh &&\
@@ -123,7 +119,6 @@ RUN wget https://dl.bintray.com/boostorg/release/${BOOST_VERSION}/source/boost_$
 WORKDIR /usr/src
 RUN wget http://mirror.switch.ch/mirror/apache/dist//xerces/c/3/sources/xerces-c-${XERCESC_VERSION}.tar.gz &&\
     source /opt/rh/devtoolset-4/enable && \
-    source /opt/rh/python27/enable && \
     tar xzf xerces-c-${XERCESC_VERSION}.tar.gz &&\
     cd xerces-c-${XERCESC_VERSION}  &&\
     mkdir -p build/linux && cd build/linux &&\
@@ -134,11 +129,10 @@ RUN wget http://mirror.switch.ch/mirror/apache/dist//xerces/c/3/sources/xerces-c
 RUN yum clean all
 RUN rm -rf /var/cache/yum
 
-## add ROOT
+### add ROOT
 WORKDIR /usr/src
 RUN git clone http://root.cern.ch/git/root.git && cd root &&\
     source /opt/rh/devtoolset-4/enable && \
-    source /opt/rh/python27/enable && \
     git tag -l && git checkout -b v${ROOT_VERSION} v${ROOT_VERSION} &&\
     mkdir -p /opt/root-${ROOT_VERSION} &&\
     cd /opt/root-${ROOT_VERSION} && \
@@ -155,7 +149,6 @@ RUN git clone http://root.cern.ch/git/root.git && cd root &&\
 # building root
 RUN cd /opt/root-${ROOT_VERSION} && \
     source /opt/rh/devtoolset-4/enable && \
-    source /opt/rh/python27/enable && \
     time make -j$(grep -c processor /proc/cpuinfo) && \
     rm -rf /usr/src/root
 
@@ -163,7 +156,6 @@ RUN cd /opt/root-${ROOT_VERSION} && \
 WORKDIR /usr/src
 RUN wget http://geant4.web.cern.ch/geant4/support/source/geant${GEANT4_VERSION_STR}.zip && \
     source /opt/rh/devtoolset-4/enable && \
-    source /opt/rh/python27/enable && \
     unzip geant${GEANT4_VERSION_STR}.zip && \
     mkdir -p /opt/geant-${GEANT4_VERSION} && \
     cd /opt/geant-${GEANT4_VERSION} && \
@@ -177,29 +169,35 @@ RUN wget http://geant4.web.cern.ch/geant4/support/source/geant${GEANT4_VERSION_S
     rm -rfv /usr/src/geant${GEANT4_VERSION_STR}.zip /usr/src/geant${GEANT4_VERSION_STR}
 
 ### add workflow
-
+ENV WORKFLOW_VERSION devel
 ADD requirements /tmp/requirements
-RUN source /opt/rh/python27/enable && \
-    pip install --upgrade pip && \
-    for pkg in $(cat /tmp/requirements); do echo "installing package ${pkg}"; pip install ${pkg}; done
-RUN curl -o workflow.tar.gz -L -k https://dampevm3.unige.ch/dmpworkflow/releases/DmpWorkflow.devel.tar.gz \
-    && tar xzvf workflow.tar.gz \
-    && mv DmpWorkflow* DmpWorkflow
-RUN mkdir -p /apps/
-ADD dampe-cli-update-job-status /apps/
-ADD docker.cfg /DmpWorkflow/DmpWorkflow/config/settings.cfg
+RUN /opt/conda/bin/pip install --upgrade pip && \
+    for pkg in $(cat /tmp/requirements); do echo "installing package ${pkg}"; /opt/conda/bin/pip install ${pkg}; done
+WORKDIR /tmp
+RUN wget --no-check-certificate https://dampevm3.unige.ch/dmpworkflow/releases/DmpWorkflow.${WORKFLOW_VERSION}.tar.gz && \
+    /opt/conda/bin/pip install DmpWorkflow.${WORKFLOW_VERSION}.tar.gz  && \
+    rm -rfv /tmp/DmpWorkflow.${WORKFLOW_VERSION}.tar.gz
+#RUN mkdir -p /apps/
+#ADD dampe-cli-update-job-status /apps/
+ADD docker.cfg /opt/conda/lib/python2.7/site-packages/DmpWorkflow/config/settings.cfg
 #
-## setup BASHRC
+# setup BASHRC
 ##RUN echo "scl enable devtoolset-4 bash" >> /root/.bashrc
 ##RUN echo "source $(find /opt -name thisroot.sh)" >> /root/.bashrc
 ##RUN echo "export PATH=/apps:${PATH}" >> /root/.bashrc
 ##RUN echo "export PYTHONPATH=/DmpWorkflow/:${PYTHONPATH}" >> /root/.bashrc
 RUN echo "source /opt/rh/devtoolset-4/enable" >> /root/.bashrc && \
-    echo "source /opt/rh/python27/enable" >> /root/.bashrc
+    echo "export PATH=/opt/conda/bin:$PATH" >> /root/.bashrc
 ADD setup.sh /root/
+
+### adding some silly boost links
+RUN echo "creating links" && \
+    ln -vs /usr/local/lib/libboost_filesystem-mt.so /usr/local/lib/libboost_filesystem.so && \
+    ln -vs /usr/local/lib/libboost_system-mt.so /usr/local/lib/libboost_system.so && \
+    ln -vs /usr/local/lib/libboost_numpy-mt.so /usr/local/lib/libboost_numpy.so && \
+    ln -vs /usr/local/lib/libboost_python-mt.so /usr/local/lib/libboost_python.so
+
 WORKDIR /root/
-#ENTRYPOINT ["scl enable devtoolset-4 bash"]
-#ENTRYPOINT ["/usr/bin/scl","enable","devtoolset-4","bash"]
 ENTRYPOINT ["/bin/bash","--login"]
 
 ## START LIKE THIS: docker run -it -e DAMPE_WORKFLOW_SERVER_URL="http://dampevm1.unige.ch:5000" -e DAMPE_WORKFLOW_WORKDIR=/workdir -v /Users/zimmer/tmp/docker_test/test_job:/workdir -w /workdir zimmerst85/dampestack-ext "/workdir/script"

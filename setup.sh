@@ -1,6 +1,6 @@
 #!/bin/bash 
-source /opt/rh/devtoolset-4/enable
-source /opt/rh/python27/enable
+#source /opt/rh/devtoolset-4/enable
+#source /opt/rh/python27/enable
 #/usr/bin/scl enable detoolset-4 bash
 ### externals setup script ###
 wd=$(pwd)
