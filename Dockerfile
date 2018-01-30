@@ -161,11 +161,12 @@ RUN wget http://geant4.web.cern.ch/geant4/support/source/geant${GEANT4_VERSION_S
     cd /opt/geant-${GEANT4_VERSION} && \
     cmake -DCMAKE_INSTALL_PREFIX=$(pwd) \
           -DGEANT4_INSTALL_DATA=ON \
+	  -DGEANT4_BUILD_MULTITHREADED=ON \
           -DGEANT4_USE_GDML=ON \
           -DGEANT4_USE_OPENGL_X11=ON \
           -DGEANT4_INSTALL_EXAMPLES=OFF \
           -DGEANT4_USE_QT=ON /usr/src/geant${GEANT4_VERSION_STR} && \
-    time make -j$(grep -c processor /proc/cpuinfo) && make install && \
+    make -j$(grep -c processor /proc/cpuinfo) && make install && \
     rm -rfv /usr/src/geant${GEANT4_VERSION_STR}.zip /usr/src/geant${GEANT4_VERSION_STR}
 
 ### add workflow
